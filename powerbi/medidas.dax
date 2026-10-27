@@ -1,0 +1,120 @@
+// Medidas para el modelo de control presupuestario.
+// Crealas en la tabla hechos_ejecucion (Inicio > Nueva medida), una por una, copiando cada bloque.
+// Importes en millones de pesos. "Al corte" = desde enero hasta el último mes del filtro.
+//
+// No se usan funciones de inteligencia de tiempo (DATESYTD, SAMEPERIODLASTYEAR) porque
+// dim_fecha tiene un registro por mes, no por día. El acumulado se arma filtrando
+// ejercicio y mes explícitamente, que es lo mismo y no depende de una tabla diaria.
+
+Presupuesto inicial =
+VAR _ejercicio = MAX ( dim_fecha[ejercicio] )
+RETURN
+    CALCULATE (
+        SUM ( hechos_ejecucion[presupuestado] ),
+        REMOVEFILTERS ( dim_fecha ),
+        dim_fecha[ejercicio] = _ejercicio
+    )
+
+Crédito vigente =
+VAR _ejercicio = MAX ( dim_fecha[ejercicio] )
+VAR _mes = MAX ( dim_fecha[mes] )
+RETURN
+    CALCULATE (
+        SUM ( hechos_ejecucion[vigente_movimiento] ),
+        REMOVEFILTERS ( dim_fecha ),
+        dim_fecha[ejercicio] = _ejercicio,
+        dim_fecha[mes] <= _mes
+    )
+
+Devengado acumulado =
+VAR _ejercicio = MAX ( dim_fecha[ejercicio] )
+VAR _mes = MAX ( dim_fecha[mes] )
+RETURN
+    CALCULATE (
+        SUM ( hechos_ejecucion[devengado] ),
+        REMOVEFILTERS ( dim_fecha ),
+        dim_fecha[ejercicio] = _ejercicio,
+        dim_fecha[mes] <= _mes
+    )
+
+Pagado acumulado =
+VAR _ejercicio = MAX ( dim_fecha[ejercicio] )
+VAR _mes = MAX ( dim_fecha[mes] )
+RETURN
+    CALCULATE (
+        SUM ( hechos_ejecucion[pagado] ),
+        REMOVEFILTERS ( dim_fecha ),
+        dim_fecha[ejercicio] = _ejercicio,
+        dim_fecha[mes] <= _mes
+    )
+
+% Ejecución =
+DIVIDE ( [Devengado acumulado], [Crédito vigente] )
+
+Modificaciones =
+[Crédito vigente] - [Presupuesto inicial]
+
+% Modificación =
+DIVIDE ( [Modificaciones], [Presupuesto inicial] )
+
+Deuda flotante =
+[Devengado acumulado] - [Pagado acumulado]
+
+% Deuda flotante =
+DIVIDE ( [Deuda flotante], [Devengado acumulado] )
+
+// Mismo corte, un año antes (por ejemplo, enero-septiembre 2025 si el filtro es septiembre 2026).
+% Ejecución año anterior =
+VAR _ejercicio = MAX ( dim_fecha[ejercicio] ) - 1
+VAR _mes = MAX ( dim_fecha[mes] )
+VAR _devengado =
+    CALCULATE (
+        SUM ( hechos_ejecucion[devengado] ),
+        REMOVEFILTERS ( dim_fecha ),
+        dim_fecha[ejercicio] = _ejercicio,
+        dim_fecha[mes] <= _mes
+    )
+VAR _vigente =
+    CALCULATE (
+        SUM ( hechos_ejecucion[vigente_movimiento] ),
+        REMOVEFILTERS ( dim_fecha ),
+        dim_fecha[ejercicio] = _ejercicio,
+        dim_fecha[mes] <= _mes
+    )
+RETURN
+    DIVIDE ( _devengado, _vigente )
+
+Diferencia vs año anterior (pp) =
+( [% Ejecución] - [% Ejecución año anterior] ) * 100
+
+// En pesos del último mes con IPC (columna factor_pesos_constantes de dim_fecha).
+Devengado real =
+SUMX (
+    hechos_ejecucion,
+    hechos_ejecucion[devengado] * RELATED ( dim_fecha[factor_pesos_constantes] )
+)
+
+Devengado real acumulado =
+VAR _ejercicio = MAX ( dim_fecha[ejercicio] )
+VAR _mes = MAX ( dim_fecha[mes] )
+RETURN
+    CALCULATE (
+        [Devengado real],
+        REMOVEFILTERS ( dim_fecha ),
+        dim_fecha[ejercicio] = _ejercicio,
+        dim_fecha[mes] <= _mes
+    )
+
+Devengado real acumulado año anterior =
+VAR _ejercicio = MAX ( dim_fecha[ejercicio] ) - 1
+VAR _mes = MAX ( dim_fecha[mes] )
+RETURN
+    CALCULATE (
+        [Devengado real],
+        REMOVEFILTERS ( dim_fecha ),
+        dim_fecha[ejercicio] = _ejercicio,
+        dim_fecha[mes] <= _mes
+    )
+
+Variación real interanual =
+DIVIDE ( [Devengado real acumulado], [Devengado real acumulado año anterior] ) - 1

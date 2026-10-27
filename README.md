@@ -1,5 +1,7 @@
 # Control presupuestario del Estado nacional
 
+[![tests](https://github.com/murphylleyton05-lgtm/control-presupuestario/actions/workflows/ci.yml/badge.svg)](https://github.com/murphylleyton05-lgtm/control-presupuestario/actions/workflows/ci.yml)
+
 Informe de control de gestión sobre la ejecución del presupuesto de la Administración Pública Nacional: cuánto se gastó de lo presupuestado, en qué, cómo cambió en términos reales y cuánto se va a gastar al cierre del año. Usa los datos oficiales de [Presupuesto Abierto](https://www.presupuestoabierto.gob.ar/sici/datos-abiertos) (Secretaría de Hacienda) y el IPC del INDEC: 11 ejercicios, mes por mes y partida por partida.
 
 > Datos al **23/10/2026**, analizados hasta septiembre (último mes completo). Todo se regenera con un comando: `presupuesto todo`. Informe completo: [`resultados/informe.md`](resultados/informe.md).

@@ -94,7 +94,3 @@ docs/decisiones.md  por qué está hecho así
 - El devengado registra la obligación de pago, no el pago. La deuda flotante se aproxima como devengado menos pagado.
 - La proyección supone que el resto del año sigue el patrón real de los 3 años anteriores y que se mantiene la inflación de los últimos 3 meses. Con 7 años de backtest, el rango es indicativo.
 - Los ministerios se reorganizan entre gestiones: un organismo nuevo no tiene contra qué compararse.
-
-## Uso de IA en el desarrollo
-
-El código se escribió con asistencia de Claude Code. Las decisiones y sus motivos están en [`docs/decisiones.md`](docs/decisiones.md); los cálculos tienen tests y las cifras se verificaron contra las publicaciones oficiales.

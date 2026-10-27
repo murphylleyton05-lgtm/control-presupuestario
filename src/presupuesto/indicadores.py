@@ -24,6 +24,8 @@ from .carga import fecha_actualizacion
 
 DIMENSIONES_COMPARABLES = {
     "jurisdiccion": ("jurisdiccion_id", "jurisdiccion_desc"),
+    # Un programa se identifica dentro de su jurisdicción y su servicio administrativo.
+    "programa": ("jurisdiccion_id || '-' || servicio_id || '-' || programa_id", "programa_desc"),
     "funcion": ("finalidad_id || '.' || funcion_id", "funcion_desc"),
     "inciso": ("inciso_id", "inciso_desc"),
     "caracter": ("caracter_id", "caracter_desc"),

@@ -4,6 +4,10 @@
 
 Informe de control de gestión sobre la ejecución del presupuesto de la Administración Pública Nacional: cuánto se gastó de lo presupuestado, en qué, cómo cambió en términos reales y cuánto se va a gastar al cierre del año. Usa los datos oficiales de [Presupuesto Abierto](https://www.presupuestoabierto.gob.ar/sici/datos-abiertos) (Secretaría de Hacienda) y el IPC del INDEC: 11 ejercicios, mes por mes y partida por partida.
 
+### [▶ Ver el tablero interactivo](https://murphylleyton05-lgtm.github.io/control-presupuestario/)
+
+Se abre en el navegador, sin instalar nada. Tiene un selector de mes que recalcula todos los indicadores, la curva de ejecución contra 2016-2025, la ejecución de cada organismo con sus programas, la variación real del gasto y la proyección de cierre con su backtest.
+
 > Datos al **23/10/2026**, analizados hasta septiembre (último mes completo). Todo se regenera con un comando: `presupuesto todo`. Informe completo: [`resultados/informe.md`](resultados/informe.md).
 
 ![Curva de ejecución](resultados/graficos/curva_ejecucion.png)
@@ -24,8 +28,9 @@ Informe de control de gestión sobre la ejecución del presupuesto de la Adminis
 
 ```
 Presupuesto Abierto (11 CSV, 316-564 MB c/u) ─┐
-INDEC (IPC mensual) ───────────────────────────┼─► descarga ─► Parquet (DuckDB) ─► controles ─► análisis ─► informe + gráficos
-Totales oficiales (2 publicaciones) ───────────┘                                      │                     └► modelo estrella para Power BI
+INDEC (IPC mensual) ───────────────────────────┼─► descarga ─► Parquet (DuckDB) ─► controles ─► análisis ─┬► tablero web (GitHub Pages)
+Totales oficiales (2 publicaciones) ───────────┘                                      │                     ├► informe + gráficos
+                                                                                       │                     └► modelo estrella (Power BI)
                                                                                        └► conciliación contra las cifras oficiales
 ```
 
@@ -39,7 +44,8 @@ Totales oficiales (2 publicaciones) ───────────┘        
    - deuda flotante (devengado y no pagado);
    - modificaciones presupuestarias.
 5. **Proyecta el cierre** con tres métodos, elegidos por backtest sobre 2019-2025.
-6. **Exporta** un modelo estrella (hechos + 7 dimensiones) para armar el tablero en Power BI.
+6. **Publica** un tablero web estático: los indicadores se calculan en Python para cada mes de corte y van embebidos en una sola página HTML, sin servidor ni librerías externas.
+7. **Exporta** además un modelo estrella (hechos + 7 dimensiones) para quien quiera armar el tablero en Power BI.
 
 ## La proyección está validada
 
@@ -50,9 +56,9 @@ Cada método se probó proyectando cada año cerrado desde septiembre, con la in
 - **Lineal (acumulado × 12/9):** subestima siempre, porque diciembre pesa más que el promedio (aguinaldo, cierres de año).
 - **Estacionalidad en términos reales:** es el mejor, con 3,3 % de error medio y 5,9 % de máximo. Es el que se usa.
 
-## Tablero en Power BI
+## Modelo para Power BI (opcional)
 
-El modelo para Power BI está en [`modelo/modelo_powerbi.zip`](modelo/): una tabla de hechos mensual de 345.000 filas y 7 dimensiones. Las medidas DAX están en [`powerbi/medidas.dax`](powerbi/medidas.dax) y la guía paso a paso en [`powerbi/GUIA.md`](powerbi/GUIA.md). Incluye valores de control para verificar que el tablero da lo mismo que el informe.
+Para quien prefiera Power BI, el modelo está en [`modelo/modelo_powerbi.zip`](modelo/): una tabla de hechos mensual de 345.000 filas y 7 dimensiones. Las medidas DAX están en [`powerbi/medidas.dax`](powerbi/medidas.dax) y la guía en [`powerbi/GUIA.md`](powerbi/GUIA.md). Las medidas se verificaron replicando su lógica sobre los CSV, no dentro de Power BI. El tablero publicado es el web.
 
 ## Cómo correrlo
 
@@ -60,7 +66,7 @@ El modelo para Power BI está en [`modelo/modelo_powerbi.zip`](modelo/): una tab
 python -m venv .venv && . .venv/bin/activate      # en Windows: .venv\Scripts\activate
 pip install -e ".[dev]"
 presupuesto todo          # descarga (~185 MB la primera vez), procesa, controla, analiza y exporta
-pytest                    # 18 tests con datos de prueba chicos, sin internet
+pytest                    # 20 tests con datos de prueba chicos, sin internet
 ```
 
 ## Estructura
@@ -75,6 +81,9 @@ src/presupuesto/
   informe.py      tablas, gráficos e informe en Markdown (sin cifras escritas a mano)
   graficos.py     gráficos con paleta validada para daltonismo
   modelo.py       modelo estrella para Power BI
+  tablero.py      datos del tablero web para cada mes de corte
+  plantilla_tablero.html  la página: gráficos SVG en JavaScript, modo claro y oscuro
+docs/index.html   tablero generado (lo publica GitHub Pages)
 resultados/       informe, gráficos y tablas de la última corrida
 powerbi/          medidas DAX y guía del tablero
 docs/decisiones.md  por qué está hecho así

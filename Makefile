@@ -1,6 +1,6 @@
 PY := .venv/bin/python
 
-.PHONY: instalar test todo informe
+.PHONY: instalar test todo informe tablero
 
 instalar:
 	python3 -m venv .venv
@@ -16,3 +16,7 @@ todo:
 # Solo regenera informe y gráficos con lo ya descargado.
 informe:
 	$(PY) -m presupuesto.cli informe
+
+# Regenera el tablero web (docs/index.html) con lo ya descargado.
+tablero:
+	$(PY) -m presupuesto.cli tablero

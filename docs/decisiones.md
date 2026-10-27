@@ -33,3 +33,7 @@ Los CSV originales pesan entre 316 y 564 MB por año (5,25 GB en total), con 53 
 ### D8. Sin funciones de inteligencia de tiempo en DAX
 
 `dim_fecha` tiene un registro por mes. Las funciones DATESYTD y SAMEPERIODLASTYEAR esperan una tabla de fechas diaria. Los acumulados se calculan filtrando ejercicio y mes de forma explícita, y el resultado se verificó replicando la lógica sobre los CSV: da las mismas cifras que el informe.
+
+### D9. El tablero se publica como página web, no como archivo de Power BI
+
+Un .pbix solo lo abre quien tiene Power BI Desktop (Windows), y publicarlo en la web requiere una cuenta de trabajo. Quien evalúa el proyecto tiene que poder verlo con un link. El tablero es una página HTML estática en GitHub Pages: los indicadores se calculan en Python con las mismas funciones que el informe, para cada mes de corte, y se embeben en la página (unos 350 KB). En el navegador no se recalcula nada, solo se elige qué corte mostrar, así que el tablero no puede dar una cifra distinta de la del informe. Los gráficos se dibujan en SVG sin librerías externas: la página no depende de ningún CDN.

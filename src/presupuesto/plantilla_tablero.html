@@ -1,0 +1,661 @@
+<!doctype html>
+<html lang="es-AR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Control presupuestario nacional</title>
+<meta name="description" content="Tablero de control de gestión sobre la ejecución del presupuesto de la Administración Pública Nacional con datos oficiales de Presupuesto Abierto e INDEC.">
+<style>
+:root {
+  color-scheme: light;
+  --plano: #f9f9f7;
+  --superficie: #fcfcfb;
+  --texto: #0b0b0b;
+  --texto-2: #52514e;
+  --texto-3: #6f6d68;
+  --grilla: #e1e0d9;
+  --eje: #c3c2b7;
+  --borde: rgba(11, 11, 11, 0.10);
+  --azul: #2a78d6;
+  --rojo: #e34948;
+  --contexto: #b9b8b2;
+  --lavado: rgba(42, 120, 214, 0.08);
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    color-scheme: dark;
+    --plano: #0d0d0d;
+    --superficie: #1a1a19;
+    --texto: #f0efec;
+    --texto-2: #c3c2b7;
+    --texto-3: #a3a196;
+    --grilla: #2c2c2a;
+    --eje: #383835;
+    --borde: rgba(255, 255, 255, 0.10);
+    --azul: #3987e5;
+    --rojo: #e66767;
+    --contexto: #5e5d58;
+    --lavado: rgba(57, 135, 229, 0.12);
+  }
+}
+:root[data-theme="dark"] {
+  color-scheme: dark;
+  --plano: #0d0d0d;
+  --superficie: #1a1a19;
+  --texto: #f0efec;
+  --texto-2: #c3c2b7;
+  --texto-3: #a3a196;
+  --grilla: #2c2c2a;
+  --eje: #383835;
+  --borde: rgba(255, 255, 255, 0.10);
+  --azul: #3987e5;
+  --rojo: #e66767;
+  --contexto: #5e5d58;
+  --lavado: rgba(57, 135, 229, 0.12);
+}
+* { box-sizing: border-box; }
+html { background: var(--plano); }
+body {
+  margin: 0;
+  background: var(--plano);
+  color: var(--texto);
+  font: 15px/1.5 system-ui, -apple-system, "Segoe UI", sans-serif;
+}
+main { max-width: 1120px; margin: 0 auto; padding: 24px 16px 48px; }
+header h1 { font-size: 26px; line-height: 1.2; margin: 0 0 6px; }
+header p { margin: 0; color: var(--texto-2); }
+a { color: var(--azul); }
+.filtros { display: flex; flex-wrap: wrap; gap: 12px; align-items: center; margin: 20px 0 16px; }
+.filtros label { color: var(--texto-2); font-size: 14px; }
+select, input[type="search"] {
+  font: inherit; color: var(--texto); background: var(--superficie);
+  border: 1px solid var(--eje); border-radius: 8px; padding: 6px 10px;
+}
+.kpis { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px; }
+@media (max-width: 900px) { .kpis { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+.tarjeta {
+  background: var(--superficie); border: 1px solid var(--borde); border-radius: 12px; padding: 16px;
+}
+.kpi .etiqueta { color: var(--texto-2); font-size: 13px; }
+.kpi .valor { font-size: 26px; font-weight: 600; margin: 2px 0; font-variant-numeric: tabular-nums; }
+.kpi .unidad { font-size: 15px; font-weight: 400; color: var(--texto-2); }
+.kpi .detalle { color: var(--texto-2); font-size: 13px; }
+.kpi.heroe { grid-column: span 2; grid-row: span 2; display: flex; flex-direction: column; justify-content: center; }
+.kpi.heroe .valor { font-size: 64px; line-height: 1.1; }
+@media (max-width: 900px) { .kpi.heroe { grid-row: span 1; } }
+@media (max-width: 520px) { .kpis { grid-template-columns: 1fr; } .kpi.heroe { grid-column: span 1; } .kpi.heroe .valor { font-size: 52px; } }
+section.tarjeta { margin-top: 16px; }
+section h2 { font-size: 18px; margin: 0 0 4px; }
+.bajada { color: var(--texto-2); margin: 0 0 12px; font-size: 14px; }
+.lectura { margin: 0 0 12px; padding: 8px 12px; border-left: 3px solid var(--azul); background: var(--lavado); border-radius: 4px; }
+.leyenda { display: flex; flex-wrap: wrap; gap: 16px; font-size: 13px; color: var(--texto-2); margin-bottom: 4px; }
+.leyenda span { display: inline-flex; align-items: center; gap: 6px; }
+.clave-linea { display: inline-block; width: 18px; height: 0; border-top: 2px solid; }
+.clave-punto { display: inline-block; width: 10px; height: 10px; border-radius: 50%; }
+.grafico { position: relative; width: 100%; }
+svg { display: block; overflow: visible; }
+svg text { fill: var(--texto-2); font-size: 12px; paint-order: stroke; stroke: var(--superficie); stroke-width: 3px; stroke-linejoin: round; }
+svg .texto-fuerte { fill: var(--texto); font-weight: 600; }
+svg .grilla { stroke: var(--grilla); stroke-width: 1; }
+svg .eje { stroke: var(--eje); stroke-width: 1; }
+svg .contexto { stroke: var(--contexto); stroke-width: 1.25; fill: none; }
+svg .actual { stroke: var(--azul); stroke-width: 2.5; fill: none; stroke-linejoin: round; stroke-linecap: round; }
+svg .punto-actual { fill: var(--azul); stroke: var(--superficie); stroke-width: 2; }
+svg .punto-anterior { fill: var(--contexto); stroke: var(--superficie); stroke-width: 2; }
+svg .conector { stroke: var(--grilla); stroke-width: 3; }
+svg .sube { fill: var(--azul); }
+svg .baja { fill: var(--rojo); }
+svg .cero { stroke: var(--texto-3); stroke-width: 1; }
+svg .cruz { stroke: var(--texto-3); stroke-width: 1; }
+svg .marca:hover, svg .marca:focus { opacity: 0.82; outline: none; }
+svg .hit { fill: transparent; cursor: default; }
+svg .hit:focus { outline: none; stroke: var(--azul); stroke-width: 1; }
+.tooltip {
+  position: fixed; z-index: 10; pointer-events: none; display: none;
+  background: var(--superficie); color: var(--texto); border: 1px solid var(--borde);
+  border-radius: 8px; padding: 8px 10px; font-size: 13px; box-shadow: 0 4px 16px rgba(0,0,0,0.12);
+  max-width: 280px;
+}
+.tooltip .t-titulo { color: var(--texto-2); margin-bottom: 4px; }
+.tooltip .t-fila { display: flex; align-items: center; gap: 8px; white-space: nowrap; }
+.tooltip .t-fila strong { font-variant-numeric: tabular-nums; }
+.botones { display: flex; gap: 8px; margin: 8px 0 0; flex-wrap: wrap; }
+button {
+  font: inherit; font-size: 13px; color: var(--texto); background: transparent;
+  border: 1px solid var(--eje); border-radius: 999px; padding: 4px 12px; cursor: pointer;
+}
+button[aria-pressed="true"] { background: var(--lavado); border-color: var(--azul); }
+.tabla-envoltura { overflow-x: auto; margin-top: 12px; }
+table { width: 100%; border-collapse: collapse; font-size: 13.5px; }
+th, td { padding: 7px 8px; border-bottom: 1px solid var(--grilla); text-align: left; vertical-align: top; }
+th { color: var(--texto-2); font-weight: 600; white-space: nowrap; }
+th button { border: 0; padding: 0; border-radius: 0; font-weight: 600; color: var(--texto-2); }
+td.num, th.num { text-align: right; font-variant-numeric: tabular-nums; white-space: nowrap; }
+tr.programa td { color: var(--texto-2); background: var(--lavado); }
+tr.programa td:first-child { padding-left: 28px; }
+.expandir { border: 0; padding: 0 6px 0 0; color: var(--texto); text-align: left; }
+#tabla-org td:first-child { min-width: 180px; }
+[hidden] { display: none !important; }
+details { margin-top: 16px; }
+summary { cursor: pointer; color: var(--texto-2); }
+dl { margin: 8px 0 0; }
+dt { font-weight: 600; }
+dd { margin: 0 0 8px; color: var(--texto-2); }
+footer { margin-top: 24px; color: var(--texto-2); font-size: 13px; }
+.oculto-accesible { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+</style>
+</head>
+<body>
+<main>
+  <header>
+    <h1>Control presupuestario del Estado nacional</h1>
+    <p id="meta"></p>
+  </header>
+
+  <div class="filtros">
+    <label for="mes">Datos hasta</label>
+    <select id="mes"></select>
+    <span class="bajada" style="margin:0">Cambia todos los indicadores del tablero.</span>
+  </div>
+
+  <div class="kpis" id="kpis"></div>
+
+  <section class="tarjeta" aria-labelledby="t-curva">
+    <h2 id="t-curva">Ritmo de ejecución</h2>
+    <p class="bajada">Devengado acumulado como % del crédito vigente, mes a mes.</p>
+    <p class="lectura" id="lectura-curva"></p>
+    <div class="leyenda" id="leyenda-curva"></div>
+    <div class="grafico" id="g-curva"></div>
+    <div class="botones"><button type="button" data-tabla="tabla-curva" aria-pressed="false">Ver tabla</button></div>
+    <div class="tabla-envoltura" id="tabla-curva" hidden></div>
+  </section>
+
+  <section class="tarjeta" aria-labelledby="t-org">
+    <h2 id="t-org">Ejecución por organismo</h2>
+    <p class="bajada" id="bajada-org"></p>
+    <div class="leyenda" id="leyenda-org"></div>
+    <div class="grafico" id="g-org"></div>
+    <div class="filtros" style="margin:16px 0 0">
+      <label for="buscar">Buscar organismo</label>
+      <input type="search" id="buscar" placeholder="Ej.: Salud">
+    </div>
+    <p class="bajada" style="margin-top:8px">Tocá un organismo para ver sus programas más grandes. Importes en millones de pesos.</p>
+    <div class="tabla-envoltura" id="tabla-org"></div>
+  </section>
+
+  <section class="tarjeta" aria-labelledby="t-real">
+    <h2 id="t-real">Qué y para qué se gasta, en términos reales</h2>
+    <p class="bajada" id="bajada-real"></p>
+    <div class="botones" role="group" aria-label="Apertura">
+      <button type="button" id="b-objeto" aria-pressed="true">Por objeto del gasto</button>
+      <button type="button" id="b-funcion" aria-pressed="false">Por función</button>
+    </div>
+    <div class="grafico" id="g-real" style="margin-top:12px"></div>
+    <div class="botones"><button type="button" data-tabla="tabla-real" aria-pressed="false">Ver tabla</button></div>
+    <div class="tabla-envoltura" id="tabla-real" hidden></div>
+  </section>
+
+  <section class="tarjeta" aria-labelledby="t-proy">
+    <h2 id="t-proy">Proyección de cierre del año</h2>
+    <p class="bajada">Cuánto se va a haber devengado al 31 de diciembre. El método se elige por su error al proyectar años anteriores desde el mismo mes.</p>
+    <p class="lectura" id="lectura-proy"></p>
+    <div class="grafico" id="g-proy"></div>
+    <div class="botones"><button type="button" data-tabla="tabla-proy" aria-pressed="false">Ver tabla</button></div>
+    <div class="tabla-envoltura" id="tabla-proy" hidden></div>
+  </section>
+
+  <section class="tarjeta" aria-labelledby="t-calidad">
+    <h2 id="t-calidad">¿Los números cierran?</h2>
+    <p class="bajada">Antes de analizar, la base se concilia contra dos publicaciones oficiales de Presupuesto Abierto. Diferencias del devengado en % (0 = coincide al peso).</p>
+    <p class="lectura" id="lectura-calidad"></p>
+    <div class="tabla-envoltura" id="tabla-calidad"></div>
+  </section>
+
+  <details>
+    <summary>Cómo leer este tablero</summary>
+    <dl>
+      <dt>Crédito vigente</dt><dd>Lo que se puede gastar: el presupuesto aprobado más las modificaciones del año.</dd>
+      <dt>Devengado</dt><dd>El gasto reconocido: la obligación de pago ya registrada, se haya pagado o no.</dd>
+      <dt>Deuda flotante</dt><dd>Lo devengado que todavía no se pagó.</dd>
+      <dt>Términos reales</dt><dd>Montos deflactados con el IPC del INDEC, en pesos del mes elegido, para comparar años con inflación distinta.</dd>
+      <dt>Último mes completo</dt><dd>Los datos se actualizan a diario: el mes en curso está incompleto y no se compara con meses cerrados.</dd>
+    </dl>
+  </details>
+
+  <footer>
+    <p>Fuentes: <a href="https://www.presupuestoabierto.gob.ar/sici/datos-abiertos">Presupuesto Abierto</a> (Secretaría de Hacienda, CC BY 4.0) e IPC del INDEC. Importes en pesos corrientes salvo indicación.
+    Código, metodología y decisiones: <a href="https://github.com/murphylleyton05-lgtm/control-presupuestario">repositorio en GitHub</a>.</p>
+  </footer>
+</main>
+<div class="tooltip" id="tooltip" role="status" aria-live="polite"></div>
+
+<script>
+const DATOS = /*__DATOS__*/null;
+
+const MESES = ["enero", "febrero", "marzo", "abril", "mayo", "junio", "julio", "agosto", "septiembre", "octubre", "noviembre", "diciembre"];
+const MESES_CORTOS = ["Ene", "Feb", "Mar", "Abr", "May", "Jun", "Jul", "Ago", "Sep", "Oct", "Nov", "Dic"];
+const NS = "http://www.w3.org/2000/svg";
+const f1 = new Intl.NumberFormat("es-AR", { minimumFractionDigits: 1, maximumFractionDigits: 1 });
+const f0 = new Intl.NumberFormat("es-AR", { maximumFractionDigits: 0 });
+
+const pct = (v, signo = false) => v == null ? "–" : (signo && v > 0 ? "+" : "") + f1.format(v) + "\u00a0%";
+const billones = v => "$ " + f1.format(v / 1e6) + " billones";
+const millones = v => v == null ? "–" : f0.format(v);
+const pp = v => v == null ? "–" : (v > 0 ? "+" : "") + f1.format(v) + " pp";
+
+let estado = { mes: DATOS.mes_corte, apertura: "objeto", orden: { clave: "vigente", desc: true }, abiertos: new Set() };
+
+// ---------- utilidades ----------
+function el(etiqueta, atributos = {}, padre) {
+  const nodo = document.createElementNS(NS, etiqueta);
+  for (const [k, v] of Object.entries(atributos)) nodo.setAttribute(k, v);
+  if (padre) padre.appendChild(nodo);
+  return nodo;
+}
+function texto(padre, x, y, contenido, atributos = {}) {
+  const nodo = el("text", { x, y, ...atributos }, padre);
+  nodo.textContent = contenido;
+  return nodo;
+}
+function h(etiqueta, contenido, atributos = {}) {
+  const nodo = document.createElement(etiqueta);
+  if (contenido != null) nodo.textContent = contenido;
+  for (const [k, v] of Object.entries(atributos)) nodo.setAttribute(k, v);
+  return nodo;
+}
+function recortar(nombre, largo) { return nombre.length <= largo ? nombre : nombre.slice(0, largo - 1) + "…"; }
+
+const tooltip = document.getElementById("tooltip");
+function mostrarTooltip(evento, titulo, filas) {
+  tooltip.replaceChildren();
+  tooltip.appendChild(h("div", titulo, { class: "t-titulo" }));
+  for (const fila of filas) {
+    const linea = h("div", null, { class: "t-fila" });
+    if (fila.color) {
+      const clave = h("span", null, { class: "clave-linea" });
+      clave.style.borderColor = fila.color;
+      linea.appendChild(clave);
+    }
+    linea.appendChild(h("strong", fila.valor));
+    linea.appendChild(h("span", fila.etiqueta));
+    tooltip.appendChild(linea);
+  }
+  tooltip.style.display = "block";
+  const caja = tooltip.getBoundingClientRect();
+  let x, y;
+  if (evento.clientX != null && evento.type !== "focus") { x = evento.clientX + 14; y = evento.clientY + 14; }
+  else { const r = evento.target.getBoundingClientRect(); x = r.right + 8; y = r.top; }
+  if (x + caja.width > window.innerWidth - 8) x = Math.max(8, x - caja.width - 28);
+  if (y + caja.height > window.innerHeight - 8) y = Math.max(8, window.innerHeight - caja.height - 8);
+  tooltip.style.left = x + "px";
+  tooltip.style.top = y + "px";
+}
+function ocultarTooltip() { tooltip.style.display = "none"; }
+function conTooltip(nodo, titulo, filas) {
+  nodo.setAttribute("tabindex", "0");
+  nodo.setAttribute("aria-label", titulo + ": " + filas.map(f => f.valor + " " + (f.etiqueta || "")).join(", "));
+  const mostrar = e => mostrarTooltip(e, titulo, filas);
+  nodo.addEventListener("pointermove", mostrar);
+  nodo.addEventListener("focus", mostrar);
+  nodo.addEventListener("pointerleave", ocultarTooltip);
+  nodo.addEventListener("blur", ocultarTooltip);
+}
+const color = variable => getComputedStyle(document.documentElement).getPropertyValue(variable).trim();
+
+function tabla(contenedor, columnas, filas) {
+  const t = h("table");
+  const cabeza = h("tr");
+  for (const c of columnas) cabeza.appendChild(h("th", c.titulo, c.num ? { class: "num" } : {}));
+  t.appendChild(h("thead")).appendChild(cabeza);
+  const cuerpo = h("tbody");
+  for (const f of filas) {
+    const tr = h("tr");
+    for (const c of columnas) tr.appendChild(h("td", c.valor(f), c.num ? { class: "num" } : {}));
+    cuerpo.appendChild(tr);
+  }
+  t.appendChild(cuerpo);
+  contenedor.replaceChildren(t);
+}
+
+// Nombres a la izquierda en pantallas anchas; arriba de cada fila en celulares.
+function geometriaFilas(ancho, cantidad) {
+  const angosto = ancho < 560;
+  const izquierda = angosto ? 8 : Math.min(300, ancho * 0.36);
+  const alto = angosto ? 46 : 32;
+  return { angosto, izquierda, alto, total: cantidad * alto + 34 };
+}
+
+// ---------- KPIs ----------
+function renderKpis(c) {
+  const k = c.kpis, m = estado.mes;
+  const anios = Object.keys(DATOS.curva).map(Number).filter(a => a < DATOS.ejercicio);
+  const rango = `${anios[0]}–${anios[anios.length - 1]}: entre ${pct(k.pct_min_previo)} y ${pct(k.pct_max_previo)}`;
+  const tarjetas = [
+    { clase: "heroe", etiqueta: `Ejecución a fin de ${MESES[m - 1]}`, valor: pct(k.pct_ejecucion),
+      detalle: `del crédito vigente. ${DATOS.ejercicio - 1} al mismo mes: ${pct(k.pct_anterior)}; ${rango}.` },
+    { etiqueta: "Crédito vigente", valor: f1.format(k.vigente / 1e6), unidad: "billones", detalle: `${pct(k.modificacion_pct, true)} sobre el presupuesto aprobado` },
+    { etiqueta: `Devengado enero-${MESES[m - 1]}`, valor: f1.format(k.devengado / 1e6), unidad: "billones",
+      detalle: `Sin pagar: ${pct(k.deuda_flotante_pct)} (${DATOS.ejercicio - 1}: ${pct(k.deuda_flotante_pct_anterior)})` },
+    { etiqueta: `Gasto real vs. ${DATOS.ejercicio - 1}`, valor: pct(k.variacion_real_pct, true), detalle: "mismo período, descontada la inflación" },
+    { etiqueta: "Proyección de cierre", valor: f1.format(c.proyeccion.estimado / 1e6), unidad: "billones",
+      detalle: `${f1.format(100 * c.proyeccion.estimado / k.vigente)} % del crédito vigente` },
+  ];
+  const cont = document.getElementById("kpis");
+  cont.replaceChildren();
+  for (const t of tarjetas) {
+    const d = h("div", null, { class: "tarjeta kpi " + (t.clase || "") });
+    const valor = h("div", t.unidad ? "$ " + t.valor + " " : t.valor, { class: "valor" });
+    if (t.unidad) valor.appendChild(h("span", t.unidad, { class: "unidad" }));
+    d.append(h("div", t.etiqueta, { class: "etiqueta" }), valor, h("div", t.detalle, { class: "detalle" }));
+    cont.appendChild(d);
+  }
+}
+
+// ---------- curva de ejecución ----------
+function renderCurva(c) {
+  const m = estado.mes, k = c.kpis;
+  const cont = document.getElementById("g-curva");
+  const ancho = cont.clientWidth, alto = Math.max(260, Math.min(380, ancho * 0.5));
+  const margen = { izq: 44, der: ancho < 560 ? 74 : 110, arr: 12, abj: 28 };
+  const iw = ancho - margen.izq - margen.der, ih = alto - margen.arr - margen.abj;
+  const x = mes => margen.izq + (mes - 1) / 11 * iw;
+  const y = v => margen.arr + ih - v / 100 * ih;
+  const svg = el("svg", { width: ancho, height: alto, role: "img", "aria-label": `Curva de ejecución acumulada ${DATOS.ejercicio} contra años anteriores` });
+  for (const v of [0, 20, 40, 60, 80, 100]) {
+    el("line", { x1: margen.izq, x2: margen.izq + iw, y1: y(v), y2: y(v), class: v === 0 ? "eje" : "grilla" }, svg);
+    texto(svg, margen.izq - 8, y(v) + 4, v + " %", { "text-anchor": "end" });
+  }
+  MESES_CORTOS.forEach((n, i) => { if (ancho >= 560 || i % 2 === 0) texto(svg, x(i + 1), alto - 8, n, { "text-anchor": "middle" }); });
+
+  const previos = Object.entries(DATOS.curva).filter(([a]) => Number(a) < DATOS.ejercicio);
+  const linea = valores => valores.map((v, i) => v == null ? null : `${x(i + 1)},${y(v)}`).filter(Boolean).join(" ");
+  for (const [, valores] of previos) el("polyline", { points: linea(valores), class: "contexto" }, svg);
+  const actual = DATOS.curva[String(DATOS.ejercicio)].slice(0, m);
+  el("polyline", { points: linea(actual), class: "actual" }, svg);
+  const ultimo = actual[m - 1];
+  el("circle", { cx: x(m), cy: y(ultimo), r: 5, class: "punto-actual" }, svg);
+  texto(svg, x(m) + 10, y(ultimo) + 4, `${DATOS.ejercicio}: ${pct(ultimo)}`, { class: "texto-fuerte" });
+  const finales = previos.map(([, v]) => v[11]).sort((a, b) => a - b);
+  texto(svg, x(12) + 8, y(finales[Math.floor(finales.length / 2)]) + 4, `${previos[0][0]}–${previos[previos.length - 1][0]}`);
+
+  // Cruz que busca el mes más cercano al puntero; el tooltip lista todos los años.
+  const cruz = el("line", { y1: margen.arr, y2: margen.arr + ih, class: "cruz", visibility: "hidden" }, svg);
+  const zona = el("rect", { x: margen.izq, y: margen.arr, width: iw, height: ih, class: "hit" }, svg);
+  const azul = color("--azul"), gris = color("--contexto");
+  const mover = e => {
+    const r = svg.getBoundingClientRect();
+    const mes = Math.min(12, Math.max(1, Math.round((e.clientX - r.left - margen.izq) / iw * 11) + 1));
+    cruz.setAttribute("x1", x(mes)); cruz.setAttribute("x2", x(mes)); cruz.setAttribute("visibility", "visible");
+    const filas = [];
+    if (mes <= m) filas.push({ valor: pct(actual[mes - 1]), etiqueta: String(DATOS.ejercicio), color: azul });
+    previos.map(([a, v]) => ({ a, v: v[mes - 1] })).sort((p, q) => q.v - p.v)
+      .forEach(p => filas.push({ valor: pct(p.v), etiqueta: p.a, color: gris }));
+    mostrarTooltip(e, `Fin de ${MESES[mes - 1]}`, filas);
+  };
+  zona.addEventListener("pointermove", mover);
+  zona.addEventListener("pointerleave", () => { cruz.setAttribute("visibility", "hidden"); ocultarTooltip(); });
+  cont.replaceChildren(svg);
+
+  const leyenda = document.getElementById("leyenda-curva");
+  leyenda.replaceChildren();
+  for (const [etq, col, grosor] of [[String(DATOS.ejercicio), "--azul", 2.5], [`${previos[0][0]}–${previos[previos.length - 1][0]}`, "--contexto", 1.25]]) {
+    const s = h("span"); const clave = h("span", null, { class: "clave-linea" });
+    clave.style.borderTop = `${grosor}px solid var(${col})`; s.append(clave, document.createTextNode(etq)); leyenda.appendChild(s);
+  }
+  const lectura = k.pct_ejecucion > k.pct_max_previo ? `A fin de ${MESES[m - 1]} se devengó el ${pct(k.pct_ejecucion)} del vigente: el ritmo más alto de la serie.`
+    : k.pct_ejecucion < k.pct_min_previo ? `A fin de ${MESES[m - 1]} se devengó el ${pct(k.pct_ejecucion)} del vigente: el ritmo más bajo de la serie.`
+    : `A fin de ${MESES[m - 1]} se devengó el ${pct(k.pct_ejecucion)} del vigente, dentro del rango de años anteriores (${pct(k.pct_min_previo)} a ${pct(k.pct_max_previo)}).`;
+  document.getElementById("lectura-curva").textContent = lectura;
+
+  const columnas = [{ titulo: "Mes", valor: f => f.mes }, { titulo: String(DATOS.ejercicio), num: true, valor: f => pct(f.actual) },
+    ...previos.map(([a]) => ({ titulo: a, num: true, valor: f => pct(f[a]) }))];
+  const filas = MESES.map((n, i) => { const f = { mes: n, actual: i < m ? actual[i] : null }; previos.forEach(([a, v]) => f[a] = v[i]); return f; });
+  tabla(document.getElementById("tabla-curva"), columnas, filas);
+}
+
+// ---------- organismos ----------
+function renderOrganismos(c) {
+  const m = estado.mes, ant = DATOS.ejercicio - 1;
+  document.getElementById("bajada-org").textContent =
+    `% del crédito vigente devengado a fin de ${MESES[m - 1]}, ${DATOS.ejercicio} contra ${ant}. Los 12 organismos con más presupuesto que existen los dos años con el mismo código.`;
+  const leyenda = document.getElementById("leyenda-org");
+  leyenda.replaceChildren();
+  for (const [etq, col] of [[String(ant), "--contexto"], [String(DATOS.ejercicio), "--azul"]]) {
+    const s = h("span"); const p = h("span", null, { class: "clave-punto" }); p.style.background = `var(${col})`;
+    s.append(p, document.createTextNode(etq)); leyenda.appendChild(s);
+  }
+  const datos = c.organismos.filter(o => o.pct_ejecucion_anterior != null).slice(0, 12);
+  const cont = document.getElementById("g-org");
+  const ancho = cont.clientWidth, g = geometriaFilas(ancho, datos.length);
+  const svg = el("svg", { width: ancho, height: g.total, role: "img", "aria-label": "Ejecución por organismo, comparada con el año anterior" });
+  const valores = datos.flatMap(o => [o.pct_ejecucion, o.pct_ejecucion_anterior]);
+  const min = Math.floor((Math.min(...valores) - 5) / 10) * 10, max = Math.ceil((Math.max(...valores) + 5) / 10) * 10;
+  const x0 = g.izquierda, x1 = ancho - 16;
+  const x = v => x0 + (v - min) / (max - min) * (x1 - x0);
+  for (let v = min; v <= max; v += 10) {
+    el("line", { x1: x(v), x2: x(v), y1: 0, y2: g.total - 26, class: "grilla" }, svg);
+    texto(svg, x(v), g.total - 8, v + " %", { "text-anchor": "middle" });
+  }
+  datos.forEach((o, i) => {
+    const yc = i * g.alto + (g.angosto ? 30 : g.alto / 2);
+    if (g.angosto) texto(svg, 8, yc - 14, recortar(o.nombre, 46), { class: "texto-fuerte" });
+    else texto(svg, x0 - 12, yc + 4, recortar(o.nombre, Math.floor(x0 / 6.6)), { "text-anchor": "end", class: "texto-fuerte" });
+    el("line", { x1: x(o.pct_ejecucion_anterior), x2: x(o.pct_ejecucion), y1: yc, y2: yc, class: "conector" }, svg);
+    el("circle", { cx: x(o.pct_ejecucion_anterior), cy: yc, r: 5, class: "punto-anterior" }, svg);
+    el("circle", { cx: x(o.pct_ejecucion), cy: yc, r: 5.5, class: "punto-actual" }, svg);
+    const derecha = o.pct_ejecucion >= o.pct_ejecucion_anterior;
+    texto(svg, x(o.pct_ejecucion) + (derecha ? 10 : -10), yc + 4, pct(o.pct_ejecucion), { "text-anchor": derecha ? "start" : "end" });
+    const zona = el("rect", { x: 0, y: i * g.alto, width: ancho, height: g.alto, class: "hit" }, svg);
+    conTooltip(zona, o.nombre, [
+      { valor: pct(o.pct_ejecucion), etiqueta: String(DATOS.ejercicio), color: color("--azul") },
+      { valor: pct(o.pct_ejecucion_anterior), etiqueta: String(ant), color: color("--contexto") },
+      { valor: pp(o.diferencia_pp), etiqueta: "diferencia" },
+    ]);
+  });
+  cont.replaceChildren(svg);
+  renderTablaOrganismos(c);
+}
+
+function renderTablaOrganismos(c) {
+  const ant = DATOS.ejercicio - 1;
+  const columnas = [
+    { clave: "nombre", titulo: "Organismo" },
+    { clave: "vigente", titulo: "Vigente", num: true, valor: o => millones(o.vigente) },
+    { clave: "devengado", titulo: "Devengado", num: true, valor: o => millones(o.devengado) },
+    { clave: "pct_ejecucion", titulo: `% ejec. ${DATOS.ejercicio}`, num: true, valor: o => pct(o.pct_ejecucion) },
+    { clave: "pct_ejecucion_anterior", titulo: `% ejec. ${ant}`, num: true, valor: o => pct(o.pct_ejecucion_anterior) },
+    { clave: "diferencia_pp", titulo: "Diferencia", num: true, valor: o => o.diferencia_pp == null ? "sin comparable" : (o.diferencia_pp >= 0 ? "▲ " : "▼ ") + pp(o.diferencia_pp) },
+    { clave: "deuda_flotante", titulo: "Deuda flotante", num: true, valor: o => millones(o.deuda_flotante) },
+  ];
+  const filtro = document.getElementById("buscar").value.trim().toLowerCase();
+  const { clave, desc } = estado.orden;
+  const filas = c.organismos.filter(o => o.nombre.toLowerCase().includes(filtro)).slice().sort((a, b) => {
+    const va = a[clave], vb = b[clave];
+    if (va == null) return 1; if (vb == null) return -1;
+    return (typeof va === "string" ? va.localeCompare(vb, "es") : va - vb) * (desc ? -1 : 1);
+  });
+  const t = h("table"), cabeza = h("tr");
+  for (const col of columnas) {
+    const th = h("th", null, col.num ? { class: "num" } : {});
+    const b = h("button", col.titulo + (clave === col.clave ? (desc ? " ↓" : " ↑") : ""), { type: "button" });
+    th.setAttribute("aria-sort", clave === col.clave ? (desc ? "descending" : "ascending") : "none");
+    b.addEventListener("click", () => { estado.orden = { clave: col.clave, desc: clave === col.clave ? !desc : col.clave !== "nombre" }; renderTablaOrganismos(c); });
+    th.appendChild(b); cabeza.appendChild(th);
+  }
+  t.appendChild(h("thead")).appendChild(cabeza);
+  const cuerpo = h("tbody");
+  for (const o of filas) {
+    const tr = h("tr"), abierto = estado.abiertos.has(o.id);
+    const primera = h("td");
+    const boton = h("button", (abierto ? "▾ " : "▸ ") + o.nombre, { type: "button", class: "expandir", "aria-expanded": String(abierto) });
+    boton.addEventListener("click", () => { abierto ? estado.abiertos.delete(o.id) : estado.abiertos.add(o.id); renderTablaOrganismos(c); });
+    primera.appendChild(boton); tr.appendChild(primera);
+    for (const col of columnas.slice(1)) tr.appendChild(h("td", col.valor(o), { class: "num" }));
+    cuerpo.appendChild(tr);
+    if (abierto) for (const p of o.programas) {
+      const fp = h("tr", null, { class: "programa" });
+      fp.append(h("td", p.nombre), h("td", millones(p.vigente), { class: "num" }), h("td", millones(p.devengado), { class: "num" }),
+        h("td", pct(p.pct_ejecucion), { class: "num" }), h("td", pct(p.pct_ejecucion_anterior), { class: "num" }),
+        h("td", p.pct_ejecucion_anterior == null ? "sin comparable" : pp(p.pct_ejecucion - p.pct_ejecucion_anterior), { class: "num" }), h("td", "", { class: "num" }));
+      cuerpo.appendChild(fp);
+    }
+  }
+  t.appendChild(cuerpo);
+  document.getElementById("tabla-org").replaceChildren(t);
+}
+
+// ---------- variación real ----------
+function renderReal(c) {
+  const m = estado.mes, ant = DATOS.ejercicio - 1;
+  const datos = estado.apertura === "objeto" ? c.real_objeto : c.real_funcion;
+  document.getElementById("bajada-real").textContent =
+    `Devengado enero-${MESES[m - 1]} ${DATOS.ejercicio} contra ${ant}, en pesos de ${MESES[m - 1]} ${DATOS.ejercicio}. Se excluyen partidas de menos del 0,5 % del gasto: con base chica, el % se dispara.`;
+  const cont = document.getElementById("g-real");
+  const ancho = cont.clientWidth, g = geometriaFilas(ancho, datos.length);
+  const svg = el("svg", { width: ancho, height: g.total, role: "img", "aria-label": "Variación real del gasto" });
+  // Dominio desde el cero hacia cada lado según los datos, con aire para la etiqueta del valor.
+  const valores = datos.map(d => d.variacion_real_pct);
+  const lo = Math.min(0, ...valores) * 1.3 - 2, hi = Math.max(0, ...valores) * 1.3 + 2;
+  const x0 = g.izquierda, x1 = ancho - 16;
+  const x = v => x0 + (v - lo) / (hi - lo) * (x1 - x0);
+  const rango = hi - lo;
+  const paso = rango > 240 ? 50 : rango > 120 ? 25 : rango > 48 || g.angosto ? 10 : 5;
+  for (let v = Math.ceil(lo / paso) * paso; v <= hi; v += paso) {
+    el("line", { x1: x(v), x2: x(v), y1: 0, y2: g.total - 26, class: v === 0 ? "cero" : "grilla" }, svg);
+    texto(svg, x(v), g.total - 8, (v > 0 ? "+" : "") + v + " %", { "text-anchor": "middle" });
+  }
+  datos.forEach((d, i) => {
+    const yc = i * g.alto + (g.angosto ? 30 : g.alto / 2), v = d.variacion_real_pct;
+    if (g.angosto) texto(svg, 8, yc - 14, recortar(d.nombre, 46), { class: "texto-fuerte" });
+    else texto(svg, x0 - 12, yc + 4, recortar(d.nombre, Math.floor(x0 / 6.6)), { "text-anchor": "end", class: "texto-fuerte" });
+    const ancho_barra = Math.max(1, Math.abs(x(v) - x(0))), alto_barra = Math.min(18, g.alto - 12);
+    const r = Math.min(4, ancho_barra / 2);
+    // Barra con la punta redondeada y la base recta, sobre el cero.
+    const x_ini = x(0), signo = v >= 0 ? 1 : -1, y0 = yc - alto_barra / 2, y1 = yc + alto_barra / 2, xf = x_ini + signo * ancho_barra;
+    const camino = `M${x_ini},${y0} L${xf - signo * r},${y0} Q${xf},${y0} ${xf},${y0 + r} L${xf},${y1 - r} Q${xf},${y1} ${xf - signo * r},${y1} L${x_ini},${y1} Z`;
+    el("path", { d: camino, class: "marca " + (v >= 0 ? "sube" : "baja") }, svg);
+    texto(svg, xf + signo * 6, yc + 4, pct(v, true), { "text-anchor": v >= 0 ? "start" : "end" });
+    const zona = el("rect", { x: 0, y: i * g.alto, width: ancho, height: g.alto, class: "hit" }, svg);
+    conTooltip(zona, d.nombre, [
+      { valor: pct(v, true), etiqueta: "variación real" },
+      { valor: millones(d.real_actual), etiqueta: `${DATOS.ejercicio} (millones, pesos de ${MESES[m - 1]})` },
+      { valor: millones(d.real_anterior), etiqueta: `${ant} (millones, pesos de ${MESES[m - 1]})` },
+    ]);
+  });
+  cont.replaceChildren(svg);
+  tabla(document.getElementById("tabla-real"), [
+    { titulo: estado.apertura === "objeto" ? "Objeto del gasto" : "Función", valor: d => d.nombre },
+    { titulo: `${ant} (millones, reales)`, num: true, valor: d => millones(d.real_anterior) },
+    { titulo: `${DATOS.ejercicio} (millones, reales)`, num: true, valor: d => millones(d.real_actual) },
+    { titulo: "Variación real", num: true, valor: d => pct(d.variacion_real_pct, true) },
+  ], datos.slice().reverse());
+}
+
+// ---------- proyección ----------
+const NOMBRES_METODO = { lineal: "Lineal (acumulado × 12 / meses)", estacional_nominal: "Estacionalidad nominal (3 años)", estacional_real: "Estacionalidad real (3 años)" };
+function renderProyeccion(c) {
+  const p = c.proyeccion, k = c.kpis, m = estado.mes;
+  const mejor = p.resumen[0];
+  const supera = p.bajo > k.vigente ? "Aun el extremo bajo del rango supera el crédito vigente: con este ritmo, el presupuesto no alcanza sin ampliaciones o una desaceleración del gasto."
+    : p.estimado > k.vigente ? "La estimación central supera el crédito vigente, aunque el rango incluye escenarios por debajo."
+    : "La estimación cabe dentro del crédito vigente.";
+  document.getElementById("lectura-proy").textContent =
+    `Con datos hasta ${MESES[m - 1]}: ${billones(p.estimado)} (rango ${billones(p.bajo)} a ${billones(p.alto)}), contra un vigente de ${billones(k.vigente)}. ${supera} ` +
+    `Método: ${NOMBRES_METODO[p.metodo].toLowerCase()}, con ${pct(mejor.error_medio_abs)} de error medio al proyectar ${mejor.ejercicios} años anteriores desde ${MESES[m - 1]}.`;
+
+  const cont = document.getElementById("g-proy");
+  const ancho = cont.clientWidth, metodos = p.resumen.map(r => r.metodo).reverse();
+  const g = geometriaFilas(ancho, metodos.length);
+  const derecha = g.angosto ? 16 : 130;
+  const svg = el("svg", { width: ancho, height: g.total, role: "img", "aria-label": "Error de cada método al proyectar años anteriores" });
+  const errores = p.puntos.map(q => q.error_pct);
+  const extremo = Math.ceil(Math.max(5, ...errores.map(Math.abs)) / 5) * 5;
+  const x0 = g.izquierda, x1 = ancho - derecha;
+  const x = v => x0 + (v + extremo) / (2 * extremo) * (x1 - x0);
+  const paso = extremo > 20 || g.angosto ? 10 : 5;
+  for (let v = -Math.floor(extremo / paso) * paso; v <= extremo; v += paso) {
+    el("line", { x1: x(v), x2: x(v), y1: 0, y2: g.total - 26, class: v === 0 ? "cero" : "grilla" }, svg);
+    texto(svg, x(v), g.total - 8, (v > 0 ? "+" : "") + v + " %", { "text-anchor": "middle" });
+  }
+  metodos.forEach((metodo, i) => {
+    const yc = i * g.alto + (g.angosto ? 30 : g.alto / 2);
+    const resumen = p.resumen.find(r => r.metodo === metodo);
+    const nombre = NOMBRES_METODO[metodo];
+    if (g.angosto) texto(svg, 8, yc - 14, `${nombre} · error medio ${pct(resumen.error_medio_abs)}`, { class: "texto-fuerte" });
+    else {
+      texto(svg, x0 - 12, yc + 4, nombre, { "text-anchor": "end", class: "texto-fuerte" });
+      texto(svg, x1 + 14, yc + 4, `error medio ${pct(resumen.error_medio_abs)}`);
+    }
+    for (const q of p.puntos.filter(q => q.metodo === metodo)) {
+      const punto = el("circle", { cx: x(q.error_pct), cy: yc, r: 5, class: "punto-actual marca" }, svg);
+      const zona = el("circle", { cx: x(q.error_pct), cy: yc, r: 12, class: "hit" }, svg);
+      conTooltip(zona, `${nombre}, ${q.ejercicio}`, [{ valor: pct(q.error_pct, true), etiqueta: "error de la proyección" }]);
+    }
+  });
+  cont.replaceChildren(svg);
+  tabla(document.getElementById("tabla-proy"), [
+    { titulo: "Método", valor: r => NOMBRES_METODO[r.metodo] },
+    { titulo: "Años probados", num: true, valor: r => r.ejercicios },
+    { titulo: "Error medio", num: true, valor: r => pct(r.error_medio_abs) },
+    { titulo: "Error máximo", num: true, valor: r => pct(r.error_maximo_abs) },
+    { titulo: "Sesgo medio", num: true, valor: r => pct(r.sesgo_medio, true) },
+  ], p.resumen);
+}
+
+// ---------- calidad ----------
+function renderCalidad() {
+  const filas = DATOS.conciliacion;
+  const dif = v => v == null ? "–" : Math.abs(v) < 0.0005 ? "0" : Math.abs(v) < 0.005 ? "< 0,01 %" : pct(v, true);
+  tabla(document.getElementById("tabla-calidad"), [
+    { titulo: "Ejercicio", valor: f => f.ejercicio },
+    { titulo: "Presupuesto inicial", valor: f => f.presupuestado_coincide ? "coincide" : "difiere" },
+    { titulo: "Devengado vs. serie anual", num: true, valor: f => dif(f["dif_devengado_vs_serie_%"]) },
+    { titulo: "Devengado vs. totales", num: true, valor: f => dif(f["dif_devengado_vs_totales_%"]) },
+  ], filas);
+  const cerrados = filas.filter(f => f["dif_devengado_vs_serie_%"] != null);
+  const coinciden = cerrados.filter(f => Math.abs(f["dif_devengado_vs_serie_%"]) < 0.0005).length;
+  document.getElementById("lectura-calidad").textContent =
+    `La base coincide al peso con la serie anual oficial en ${coinciden} de ${cerrados.length} ejercicios cerrados. Las dos publicaciones oficiales no coinciden entre sí en varios años: la diferencia se muestra, no se esconde.`;
+}
+
+// ---------- armado ----------
+function render() {
+  const c = DATOS.cortes[String(estado.mes)];
+  renderKpis(c); renderCurva(c); renderOrganismos(c); renderReal(c); renderProyeccion(c);
+}
+
+function iniciar() {
+  const fecha = new Date(DATOS.actualizacion + "T12:00:00");
+  document.getElementById("meta").textContent =
+    `Ejecución del presupuesto de la Administración Pública Nacional, ${DATOS.ejercicio}. Datos oficiales al ${fecha.toLocaleDateString("es-AR")}; último mes completo: ${MESES[DATOS.mes_corte - 1]}.`;
+  const selector = document.getElementById("mes");
+  for (let m = DATOS.mes_corte; m >= 1; m--) {
+    const op = h("option", `${MESES[m - 1][0].toUpperCase() + MESES[m - 1].slice(1)} ${DATOS.ejercicio}`, { value: m });
+    selector.appendChild(op);
+  }
+  selector.addEventListener("change", () => { estado.mes = Number(selector.value); render(); });
+  document.getElementById("buscar").addEventListener("input", () => renderTablaOrganismos(DATOS.cortes[String(estado.mes)]));
+  for (const [id, apertura] of [["b-objeto", "objeto"], ["b-funcion", "funcion"]]) {
+    document.getElementById(id).addEventListener("click", () => {
+      estado.apertura = apertura;
+      document.getElementById("b-objeto").setAttribute("aria-pressed", String(apertura === "objeto"));
+      document.getElementById("b-funcion").setAttribute("aria-pressed", String(apertura === "funcion"));
+      renderReal(DATOS.cortes[String(estado.mes)]);
+    });
+  }
+  for (const b of document.querySelectorAll("button[data-tabla]")) {
+    b.addEventListener("click", () => {
+      const destino = document.getElementById(b.dataset.tabla), abrir = destino.hidden;
+      destino.hidden = !abrir; b.setAttribute("aria-pressed", String(abrir)); b.textContent = abrir ? "Ocultar tabla" : "Ver tabla";
+    });
+  }
+  renderCalidad();
+  render();
+  let espera;
+  new ResizeObserver(() => { clearTimeout(espera); espera = setTimeout(render, 120); }).observe(document.querySelector("main"));
+  window.matchMedia("(prefers-color-scheme: dark)").addEventListener("change", render);
+}
+iniciar();
+</script>
+</body>
+</html>

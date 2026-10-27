@@ -5,6 +5,7 @@
     presupuesto procesar    convierte cada ejercicio a Parquet en data/procesado/
     presupuesto informe     controles + análisis + gráficos en resultados/
     presupuesto modelo      tablas del modelo estrella para Power BI en modelo/
+    presupuesto tablero     tablero web interactivo en docs/index.html (GitHub Pages)
 """
 
 from __future__ import annotations
@@ -14,13 +15,14 @@ import sys
 from datetime import date
 from pathlib import Path
 
-from . import carga, controles, fuentes, indicadores, informe, modelo
+from . import carga, controles, fuentes, indicadores, informe, modelo, tablero
 
 
 def _rutas(args: argparse.Namespace) -> dict[str, Path]:
     raiz = Path(args.raiz)
     return {"crudo": raiz / "data" / "crudo", "procesado": raiz / "data" / "procesado",
-            "tmp": raiz / "data" / "tmp", "resultados": raiz / "resultados", "modelo": raiz / "modelo"}
+            "tmp": raiz / "data" / "tmp", "resultados": raiz / "resultados", "modelo": raiz / "modelo",
+            "tablero": raiz / "docs" / "index.html"}
 
 
 def cmd_descargar(args, rutas) -> None:
@@ -66,8 +68,14 @@ def cmd_modelo(args, rutas) -> None:
         print(f"  {tabla}: {n:,} filas".replace(",", "."))
 
 
+def cmd_tablero(args, rutas) -> None:
+    con, totales, serie, ipc = _entradas(rutas)
+    tablero.generar(tablero.datos(con, totales, serie, ipc, args.ejercicio), rutas["tablero"])
+    print(f"Tablero: {rutas['tablero']}")
+
+
 def cmd_todo(args, rutas) -> None:
-    for paso in (cmd_descargar, cmd_procesar, cmd_informe, cmd_modelo):
+    for paso in (cmd_descargar, cmd_procesar, cmd_informe, cmd_modelo, cmd_tablero):
         paso(args, rutas)
 
 
@@ -80,7 +88,7 @@ def main(argv: list[str] | None = None) -> None:
     parser.add_argument("--desde-modelo", type=int, default=2022, help="primer ejercicio del modelo de Power BI")
     parser.add_argument("--forzar", action="store_true", help="reprocesa también los ejercicios cerrados")
     comandos = {"todo": cmd_todo, "descargar": cmd_descargar, "procesar": cmd_procesar,
-                "informe": cmd_informe, "modelo": cmd_modelo}
+                "informe": cmd_informe, "modelo": cmd_modelo, "tablero": cmd_tablero}
     parser.add_argument("comando", choices=comandos)
     args = parser.parse_args(argv)
     comandos[args.comando](args, _rutas(args))
